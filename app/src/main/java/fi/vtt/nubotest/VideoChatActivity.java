@@ -3,6 +3,7 @@ package fi.vtt.nubotest;
 import android.*;
 import android.app.ListActivity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.opengl.GLSurfaceView;
@@ -38,6 +39,7 @@ import org.webrtc.VideoTrack;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomError;
@@ -69,6 +71,7 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
     private VideoRenderer.Callbacks remoteRender;
     private GLSurfaceView videoView;
 
+    private SharedPreferences mSharedPreferences;
 
     private int publishVideoRequestId;
 
@@ -149,6 +152,8 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
                 NBMMediaConfiguration.NBMCameraPosition.FRONT);
         nbmWebRTCPeer = new NBMWebRTCPeer(peerConnectionParameters, this, localRender, this);
         nbmWebRTCPeer.initialize();
+
+        MainActivity.roomObserver.addObserver(this);
 
         // If the intent contains a number to dial, call it now that you are connected.
         //  Else, remain listening for a call.
@@ -267,33 +272,34 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
     @Override
     public void onLocalSdpAnswerGenerated(SessionDescription sessionDescription, NBMPeerConnection nbmPeerConnection) {
-
+        
     }
 
     @Override
     public void onIceCandidate(IceCandidate iceCandidate, NBMPeerConnection nbmPeerConnection) {
-        // set the parameters correctly
-     //   MainActivity.getKurentoRoomAPIInstance().sendOnIceCandidate();
+
+        MainActivity.getKurentoRoomAPIInstance().sendOnIceCandidate(this.username, iceCandidate.sdp,
+                                                iceCandidate.sdpMid, Integer.toString(iceCandidate.sdpMLineIndex));
     }
 
     @Override
     public void onIceStatusChanged(PeerConnection.IceConnectionState iceConnectionState, NBMPeerConnection nbmPeerConnection) {
-
+        Log.i(TAG, "onIceStatusChanged");
     }
 
     @Override
     public void onRemoteStreamAdded(MediaStream mediaStream, NBMPeerConnection nbmPeerConnection) {
-
+        nbmWebRTCPeer.attachRendererToRemoteStream(remoteRender, mediaStream);
     }
 
     @Override
     public void onRemoteStreamRemoved(MediaStream mediaStream, NBMPeerConnection nbmPeerConnection) {
-
+        Log.i(TAG, "onRemoteStreamRemoved");
     }
 
     @Override
     public void onPeerConnectionError(String s) {
-
+        Log.e(TAG, "onPeerConnectionError:" + s);
     }
 
     @Override
@@ -315,5 +321,20 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
     @Override
     public void onRoomNotification(RoomNotification notification) {
         Log.i(TAG, "OnRoomNotification:" + notification);
+
+        if(notification.getMethod().equals("iceCandidate"))
+        {
+            Map<String, Object> map = notification.getParams();
+
+            String sdpMid = map.get("sdpMid").toString();
+            int sdpMLineIndex = Integer.valueOf(map.get("sdpMLineIndex").toString());
+            String sdp = map.get("candidate").toString();
+
+            IceCandidate ic = new IceCandidate(sdpMid, sdpMLineIndex, sdp);
+
+            nbmWebRTCPeer.addRemoteIceCandidate(ic, "derp");
+
+        }
+
     }
 }

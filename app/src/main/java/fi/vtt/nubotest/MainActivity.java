@@ -18,6 +18,7 @@ import android.widget.Toast;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Vector;
 
 import fi.vtt.nubomedia.kurentoroomclientandroid.KurentoRoomAPI;
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomError;
@@ -36,13 +37,51 @@ public class MainActivity extends Activity implements RoomListener {
     Handler mHandler;
 
     private LooperExecutor executor;
+
+    // ToDo: Change these into something safer and prettier
     private static KurentoRoomAPI kurentoRoomAPI;
+    public static RoomAPIEvents roomObserver;
+
     private int roomId=0;
 
     private EditText mCallNumET, mTextMessageET;
     private TextView mUsernameTV, mTextMessageTV;
 
     public boolean mBounded;
+
+    public class RoomAPIEvents implements RoomListener {
+
+        Vector<RoomListener> listeners;
+
+        private RoomAPIEvents(){
+            listeners = new Vector<RoomListener>();
+        }
+
+        public void addObserver(RoomListener listener){
+            listeners.addElement(listener);
+        }
+
+        @Override
+        public void onRoomResponse(RoomResponse response) {
+            for (RoomListener rl : listeners){
+                rl.onRoomResponse(response);
+            }
+        }
+
+        @Override
+        public void onRoomError(RoomError error) {
+            for (RoomListener rl : listeners){
+                rl.onRoomError(error);
+            }
+        }
+
+        @Override
+        public void onRoomNotification(RoomNotification notification) {
+            for (RoomListener rl : listeners){
+                rl.onRoomNotification(notification);
+            }
+        }
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -76,12 +115,15 @@ public class MainActivity extends Activity implements RoomListener {
         }
         if(kurentoRoomAPI==null) {
             Log.i(TAG, "kurentoRoomAPI is null");
-            kurentoRoomAPI = new KurentoRoomAPI(executor, wsUri, this);
+            roomObserver = new RoomAPIEvents();
+            roomObserver.addObserver(this);
+            kurentoRoomAPI = new KurentoRoomAPI(executor, wsUri, roomObserver);
         }
 
         if (!kurentoRoomAPI.isWebSocketConnected()) {
             Log.i(TAG, "connectWebSocket");
             kurentoRoomAPI.connectWebSocket();
+
         }
 
         mHandler = new Handler();
