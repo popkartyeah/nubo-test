@@ -34,8 +34,8 @@ public class Constants {
     public static final String STATUS_BUSY      = "Busy";
 
     public static final String SERVER_NAME      = "serverName";
-    public static final String DEFAULT_SERVER   = "ws://130.188.58.113:8080/room";
-    //public static final String DEFAULT_SERVER   = "ws://192.168.0.50:8080/room";
+    //public static final String DEFAULT_SERVER   = "ws://130.188.58.113:8080/room";
+    public static final String DEFAULT_SERVER   = "ws://192.168.0.50:8080/room";
     public static String SERVER_ADDRESS_SET_BY_USER = "ws://192.168.0.50:8080/room";
     public static final String ROOM_NAME    = "fi.vtt.nubotest.SHARED_PREFS.ROOM_NAME";
     public static int id    = 0;

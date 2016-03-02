@@ -1,46 +1,29 @@
 package fi.vtt.nubotest;
 
-import android.*;
 import android.app.ListActivity;
-import android.content.Context;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
 import android.graphics.ImageFormat;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-import org.webrtc.AudioSource;
-import org.webrtc.AudioTrack;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
 import org.webrtc.RendererCommon;
 import org.webrtc.SessionDescription;
-import org.webrtc.VideoCapturer;
-import org.webrtc.VideoCapturerAndroid;
 import org.webrtc.VideoRenderer;
 import org.webrtc.VideoRendererGui;
-import org.webrtc.VideoSource;
-import org.webrtc.VideoTrack;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomError;
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomListener;
@@ -49,10 +32,8 @@ import fi.vtt.nubomedia.kurentoroomclientandroid.RoomResponse;
 import fi.vtt.nubomedia.webrtcpeerandroid.NBMMediaConfiguration;
 import fi.vtt.nubomedia.webrtcpeerandroid.NBMPeerConnection;
 import fi.vtt.nubomedia.webrtcpeerandroid.NBMWebRTCPeer;
-import fi.vtt.nubotest.adt.ChatMessage;
 
 import fi.vtt.nubotest.util.Constants;
-import fi.vtt.nubotest.util.LogRTCListener;
 
 /**
  * This chat will begin/subscribe to a video chat.
@@ -74,6 +55,7 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
     private SharedPreferences mSharedPreferences;
 
     private int publishVideoRequestId;
+    private int sendIceCandidateRequestId;
 
     private EditText mChatEditText;
     private ListView mChatList;
@@ -133,6 +115,7 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
         this.mChatEditText = (EditText) findViewById(R.id.chat_input);
         this.mCallStatus   = (TextView) findViewById(R.id.call_status);
 
+        this.videoView = (GLSurfaceView) findViewById(R.id.gl_surface);
         // Set up the List View for chatting
         RendererCommon.ScalingType scalingType = RendererCommon.ScalingType.SCALE_ASPECT_FILL;
         VideoRendererGui.setView(videoView, null);
@@ -242,7 +225,7 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
         endCall();
     }
 
-    private void publishLocalStream(){
+    public void publishLocalStream(View view){
 
         nbmWebRTCPeer.generateOffer("derp");
     }
@@ -263,7 +246,7 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
                     Log.d(TAG, "Sending " + sessionDescription.type);
                     publishVideoRequestId = ++Constants.id;
 
-                    MainActivity.getKurentoRoomAPIInstance().sendPublishVideo(sessionDescription.toString(),true,publishVideoRequestId);
+                    MainActivity.getKurentoRoomAPIInstance().sendPublishVideo(sessionDescription.description,true,publishVideoRequestId);
                 }
             }
         });
@@ -272,14 +255,15 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
     @Override
     public void onLocalSdpAnswerGenerated(SessionDescription sessionDescription, NBMPeerConnection nbmPeerConnection) {
-        
+
     }
 
     @Override
     public void onIceCandidate(IceCandidate iceCandidate, NBMPeerConnection nbmPeerConnection) {
 
+        sendIceCandidateRequestId = ++Constants.id;
         MainActivity.getKurentoRoomAPIInstance().sendOnIceCandidate(this.username, iceCandidate.sdp,
-                                                iceCandidate.sdpMid, Integer.toString(iceCandidate.sdpMLineIndex));
+                                                iceCandidate.sdpMid, Integer.toString(iceCandidate.sdpMLineIndex),sendIceCandidateRequestId);
     }
 
     @Override
