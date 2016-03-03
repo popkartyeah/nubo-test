@@ -12,8 +12,6 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.json.JSONObject;
-
 import fi.vtt.nubotest.util.Constants;
 
 
@@ -83,7 +81,7 @@ public class IncomingCallActivity extends Activity {
     }
 
     public void acceptCall(View view){
-        Intent intent = new Intent(IncomingCallActivity.this, VideoChatActivity.class);
+        Intent intent = new Intent(IncomingCallActivity.this, PeerVideoActivity.class);
         intent.putExtra(Constants.USER_NAME, this.username); 
         intent.putExtra(Constants.CALL_USER, this.callUser);
         startActivity(intent);

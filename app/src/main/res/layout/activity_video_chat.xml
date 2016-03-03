@@ -1,7 +1,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="fi.vtt.nubotest.VideoChatActivity">
+    tools:context=".PeerVideoActivity">
 
     <android.opengl.GLSurfaceView
         android:id="@+id/gl_surface"
@@ -28,38 +28,34 @@
         android:layout_alignParentBottom="true"
         android:orientation="horizontal">
 
-        <EditText
-            android:id="@+id/chat_input"
-            android:textColor="#FFF"
-            android:backgroundTint="@color/blue"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="4"
-            android:textColorHint="@color/white"
-            android:hint="Enter Message..."/>
-
         <RelativeLayout
             android:layout_width="0dp"
             android:layout_weight="1"
             android:layout_height="match_parent">
 
             <ImageButton
-                android:layout_centerHorizontal="true"
                 android:contentDescription="Send"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/round_button_send"
                 android:src="@drawable/ic_action_send_now"
-                android:onClick="publishLocalStream" />
+                android:onClick="receiveFromRemote"
+                android:id="@+id/imageButton"
+                android:layout_marginEnd="47dp"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentEnd="true" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:attr/textAppearanceLarge"
+                android:text="Receive from peer"
+                android:id="@+id/receive_prompt"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentStart="true"
+                android:layout_marginStart="35dp" />
 
         </RelativeLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAppearance="?android:attr/textAppearanceLarge"
-            android:text="Large Text"
-            android:id="@+id/textView2" />
 
     </LinearLayout>
 

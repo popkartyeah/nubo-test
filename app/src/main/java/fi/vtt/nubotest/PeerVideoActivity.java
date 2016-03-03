@@ -5,13 +5,12 @@ import android.content.SharedPreferences;
 import android.graphics.ImageFormat;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,17 +35,18 @@ import fi.vtt.nubomedia.webrtcpeerandroid.NBMWebRTCPeer;
 import fi.vtt.nubotest.util.Constants;
 
 /**
- * This chat will begin/subscribe to a video chat.
- * REQUIRED: The intent must contain a
+ * Activity for receiving the video stream of a peer
+ * (based on PeerVideoActivity of Pubnub's video chat tutorial example.
+ *
  */
-public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Observer, RoomListener {
-    public static final String VIDEO_TRACK_ID = "videoPN";
-    public static final String AUDIO_TRACK_ID = "audioPN";
-    public static final String LOCAL_MEDIA_STREAM_ID = "localStreamPN";
-    private String TAG = "VideoChatActivity";
+public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Observer, RoomListener {
+    private String TAG = "PeerVideoActivity";
 
     private NBMMediaConfiguration peerConnectionParameters;
     private NBMWebRTCPeer nbmWebRTCPeer;
+
+    private SessionDescription localSdp;
+    private SessionDescription remoteSdp;
 
     private VideoRenderer.Callbacks localRender;
     private VideoRenderer.Callbacks remoteRender;
@@ -57,16 +57,11 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
     private int publishVideoRequestId;
     private int sendIceCandidateRequestId;
 
-    private EditText mChatEditText;
-    private ListView mChatList;
     private TextView mCallStatus;
 
     private String username, calluser;
     private boolean backPressed = false;
     private Thread  backPressedThread = null;
-    private int PERMISSIONS_REQUEST_RECORD_AUDIO = 4321412;
-    private int PERMISSIONS_REQUEST_VIDEO = 1321412;
-    private int PERMISSIONS_REQUEST_CAMERA = 1121412;
 
 
     private static final int LOCAL_X_CONNECTED = 72;
@@ -79,15 +74,13 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
     private static final int REMOTE_WIDTH = 100;
     private static final int REMOTE_HEIGHT = 100;
 
+    private Handler mHandler;
 
-    // List of mandatory application permissions.
-    private static final String[] MANDATORY_PERMISSIONS = {
-            "android.permission.MODIFY_AUDIO_SETTINGS",
-            "android.permission.RECORD_AUDIO",
-            "android.permission.INTERNET",
-            "android.permission.CAPTURE_VIDEO_OUTPUT",
-            "android.permission.CAMERA"
-    };
+    private CallState callState;
+
+    private enum CallState{
+        IDLE, PUBLISHING, PUBLISHED, WAITING_REMOTE_USER, RECEIVING_REMOTE_USER
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -98,7 +91,7 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
         Bundle extras = getIntent().getExtras();
         if (extras == null || !extras.containsKey(Constants.USER_NAME)) {
             ;
-            Toast.makeText(this, "Need to pass username to VideoChatActivity in intent extras (Constants.USER_NAME).",
+            Toast.makeText(this, "Need to pass username to PeerVideoActivity in intent extras (Constants.USER_NAME).",
                     Toast.LENGTH_SHORT).show();
             finish();
             return;
@@ -111,9 +104,9 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
             Log.wtf(TAG, "callUser: "+calluser);
         }
 
-        this.mChatList     = getListView();
-        this.mChatEditText = (EditText) findViewById(R.id.chat_input);
         this.mCallStatus   = (TextView) findViewById(R.id.call_status);
+        TextView prompt   = (TextView) findViewById(R.id.receive_prompt);
+        prompt.setText("Receive from " + calluser);
 
         this.videoView = (GLSurfaceView) findViewById(R.id.gl_surface);
         // Set up the List View for chatting
@@ -138,6 +131,16 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
         MainActivity.roomObserver.addObserver(this);
 
+        callState = CallState.IDLE;
+
+        mHandler = new Handler();
+        mHandler.postDelayed(publishDelayed, 3000);
+
+
+        nbmWebRTCPeer.generateOffer("derp");
+        callState = CallState.PUBLISHING;
+
+        mCallStatus.setText("Publishing...");
         // If the intent contains a number to dial, call it now that you are connected.
         //  Else, remain listening for a call.
 //        if (extras.containsKey(Constants.CALL_USER)) {
@@ -148,6 +151,15 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
 
     }
+
+    private Runnable publishDelayed = new Runnable() {
+
+        @Override
+        public void run() {
+            nbmWebRTCPeer.generateOffer("derp");
+        }
+    };
+
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -225,9 +237,22 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
         endCall();
     }
 
-    public void publishLocalStream(View view){
+    public void receiveFromRemote(View view){
 
-        nbmWebRTCPeer.generateOffer("derp");
+        if (callState == CallState.PUBLISHED){
+            nbmWebRTCPeer.generateOffer("remote");
+
+            callState = CallState.WAITING_REMOTE_USER;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mCallStatus.setText("Waiting remote stream...");
+                }
+            });
+
+
+        }
+//        nbmWebRTCPeer.generateOffer("derp");
     }
 
     private void endCall() {
@@ -239,18 +264,41 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
     @Override
     public void onLocalSdpOfferGenerated(final SessionDescription sessionDescription, NBMPeerConnection nbmPeerConnection) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (MainActivity.getKurentoRoomAPIInstance() != null) {
-                    Log.d(TAG, "Sending " + sessionDescription.type);
-                    publishVideoRequestId = ++Constants.id;
+        if (callState == CallState.PUBLISHING || callState == CallState.PUBLISHED) {
+            localSdp = sessionDescription;
 
-                    MainActivity.getKurentoRoomAPIInstance().sendPublishVideo(sessionDescription.description,true,publishVideoRequestId);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (MainActivity.getKurentoRoomAPIInstance() != null) {
+                        Log.d(TAG, "Sending " + sessionDescription.type);
+                        publishVideoRequestId = ++Constants.id;
+
+//                    String sender = calluser + "_webcam";
+//                    MainActivity.getKurentoRoomAPIInstance().sendReceiveVideoFrom(sender, localSdp.description, publishVideoRequestId);
+
+                        MainActivity.getKurentoRoomAPIInstance().sendPublishVideo(localSdp.description, false, publishVideoRequestId);
+                    }
                 }
-            }
-        });
+            });
+        } else { // Asking for remote user video
+            remoteSdp = sessionDescription;
 
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (MainActivity.getKurentoRoomAPIInstance() != null) {
+                        Log.d(TAG, "Sending " + sessionDescription.type);
+                        publishVideoRequestId = ++Constants.id;
+
+                        String sender = calluser + "_webcam";
+                        MainActivity.getKurentoRoomAPIInstance().sendReceiveVideoFrom(sender, remoteSdp.description, publishVideoRequestId);
+
+                    }
+                }
+            });
+
+        }
     }
 
     @Override
@@ -262,9 +310,15 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
     public void onIceCandidate(IceCandidate iceCandidate, NBMPeerConnection nbmPeerConnection) {
 
         sendIceCandidateRequestId = ++Constants.id;
-        MainActivity.getKurentoRoomAPIInstance().sendOnIceCandidate(this.username, iceCandidate.sdp,
-                                                iceCandidate.sdpMid, Integer.toString(iceCandidate.sdpMLineIndex),sendIceCandidateRequestId);
+        if (callState == CallState.PUBLISHING || callState == CallState.PUBLISHED){
+            MainActivity.getKurentoRoomAPIInstance().sendOnIceCandidate(this.username, iceCandidate.sdp,
+                    iceCandidate.sdpMid, Integer.toString(iceCandidate.sdpMLineIndex), sendIceCandidateRequestId);
+        } else {
+            MainActivity.getKurentoRoomAPIInstance().sendOnIceCandidate(this.calluser, iceCandidate.sdp,
+                    iceCandidate.sdpMid, Integer.toString(iceCandidate.sdpMLineIndex), sendIceCandidateRequestId);
+        }
     }
+
 
     @Override
     public void onIceStatusChanged(PeerConnection.IceConnectionState iceConnectionState, NBMPeerConnection nbmPeerConnection) {
@@ -273,7 +327,16 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
     @Override
     public void onRemoteStreamAdded(MediaStream mediaStream, NBMPeerConnection nbmPeerConnection) {
+        Log.i(TAG, "onRemoteStreamAdded");
         nbmWebRTCPeer.attachRendererToRemoteStream(remoteRender, mediaStream);
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mCallStatus.setText("");
+            }
+        });
+
     }
 
     @Override
@@ -293,7 +356,17 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
             SessionDescription sd = new SessionDescription(SessionDescription.Type.ANSWER,
                                                             response.getValue("sdpAnswer"));
-            nbmWebRTCPeer.processAnswer(sd, "derp");
+
+            if (callState == CallState.PUBLISHING){
+                callState = CallState.PUBLISHED;
+                nbmWebRTCPeer.processAnswer(sd, "derp");
+            } else if (callState == CallState.WAITING_REMOTE_USER){
+                callState = CallState.RECEIVING_REMOTE_USER;
+                nbmWebRTCPeer.processAnswer(sd, "remote");
+            } else {
+                //NOP
+            }
+
         }
     }
 
@@ -304,7 +377,7 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
     @Override
     public void onRoomNotification(RoomNotification notification) {
-        Log.i(TAG, "OnRoomNotification:" + notification);
+        Log.i(TAG, "OnRoomNotification (state=" + callState.toString() + "):" + notification);
 
         if(notification.getMethod().equals("iceCandidate"))
         {
@@ -316,7 +389,12 @@ public class VideoChatActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
             IceCandidate ic = new IceCandidate(sdpMid, sdpMLineIndex, sdp);
 
-            nbmWebRTCPeer.addRemoteIceCandidate(ic, "derp");
+
+            if (callState == CallState.PUBLISHING || callState == CallState.PUBLISHED) {
+                nbmWebRTCPeer.addRemoteIceCandidate(ic, "derp");
+            } else {
+                nbmWebRTCPeer.addRemoteIceCandidate(ic, "remote");
+            }
 
         }
 

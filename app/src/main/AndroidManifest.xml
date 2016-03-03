@@ -36,7 +36,7 @@
 
         </activity>
         <activity
-            android:name="fi.vtt.nubotest.VideoChatActivity"
+            android:name=".PeerVideoActivity"
             android:label="@string/title_activity_video_chat"
             android:screenOrientation="portrait"
             android:parentActivityName="fi.vtt.nubotest.MainActivity"

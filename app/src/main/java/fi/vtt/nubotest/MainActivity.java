@@ -271,10 +271,10 @@ public class MainActivity extends Activity implements RoomListener {
         Log.wtf(TAG, "sendPublishVideo("+ signalingParams.toString()+","+false+","+ id +")");
         kurentoRoomAPI.sendPublishVideo(signalingParams.toString(), false, id++);
         */
-        Intent intent = new Intent(MainActivity.this, VideoChatActivity.class);
+        Intent intent = new Intent(MainActivity.this, PeerVideoActivity.class);
         intent.putExtra(Constants.USER_NAME, username);
 
-        //intent.putExtra(Constants.CALL_USER, callNum);  // Only accept from this number?
+        intent.putExtra(Constants.CALL_USER, callNum);  // Only accept from this number?
         startActivity(intent);
 
     }
