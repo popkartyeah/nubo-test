@@ -28,8 +28,5 @@ public class PreferencesActivity extends PreferenceActivity {
 
         EditTextPreference pref = (EditTextPreference)findPreference(Constants.SERVER_NAME);
         pref.getEditText().setInputType(InputType.TYPE_CLASS_TEXT);
-
-
     }
-
 }
