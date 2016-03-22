@@ -2,7 +2,6 @@ package fi.vtt.nubotest;
 
 import android.app.ListActivity;
 import android.content.SharedPreferences;
-import android.graphics.ImageFormat;
 import android.graphics.PixelFormat;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
@@ -83,6 +82,8 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        callState = CallState.IDLE;
+
         setContentView(R.layout.activity_video_chat);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mHandler = new Handler();
@@ -127,9 +128,14 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
         nbmWebRTCPeer.initialize();
         Log.i(TAG, "PeerVideoActivity initialized");
         mHandler.postDelayed(publishDelayed, 4000);
+
+        MainActivity.getKurentoRoomAPIInstance().addObserver(this);
+
+
+
         callState = CallState.PUBLISHING;
         mCallStatus.setText("Publishing...");
-        MainActivity.roomObserver.addObserver(this);
+
     }
 
     private Runnable publishDelayed = new Runnable() {
@@ -371,5 +377,15 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
                 nbmWebRTCPeer.addRemoteIceCandidate(ic, "remote");
             }
         }
+    }
+
+    @Override
+    public void onRoomConnected() {
+
+    }
+
+    @Override
+    public void onRoomDisconnected() {
+
     }
 }

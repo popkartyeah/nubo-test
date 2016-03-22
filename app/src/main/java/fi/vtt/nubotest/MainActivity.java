@@ -44,41 +44,8 @@ public class MainActivity extends Activity implements RoomListener {
     private EditText mCallNumET, mTextMessageET;
     private TextView mUsernameTV, mTextMessageTV;
     Handler mHandler;
-    public static RoomAPIEvents roomObserver;
     public boolean mBounded;
     public static Context context;
-
-    public class RoomAPIEvents implements RoomListener {
-
-        Vector<RoomListener> listeners;
-        private RoomAPIEvents(){
-            listeners = new Vector<RoomListener>();
-        }
-        public void addObserver(RoomListener listener){
-            listeners.addElement(listener);
-        }
-
-        @Override
-        public void onRoomResponse(RoomResponse response) {
-            for (RoomListener rl : listeners){
-                rl.onRoomResponse(response);
-            }
-        }
-
-        @Override
-        public void onRoomError(RoomError error) {
-            for (RoomListener rl : listeners){
-                rl.onRoomError(error);
-            }
-        }
-
-        @Override
-        public void onRoomNotification(RoomNotification notification) {
-            for (RoomListener rl : listeners){
-                rl.onRoomNotification(notification);
-            }
-        }
-    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -113,9 +80,8 @@ public class MainActivity extends Activity implements RoomListener {
         if(kurentoRoomAPI==null) {
 
             Log.i(TAG, "kurentoRoomAPI is null");
-            roomObserver = new RoomAPIEvents();
-            roomObserver.addObserver(this);
-            kurentoRoomAPI = new KurentoRoomAPI(executor, wsUri, roomObserver);
+            kurentoRoomAPI = new KurentoRoomAPI(executor, wsUri, this);
+
 
             // Load test certificate from assets
             CertificateFactory cf;
@@ -138,7 +104,6 @@ public class MainActivity extends Activity implements RoomListener {
         }
 
         mHandler = new Handler();
-        mHandler.postDelayed(joinRoomDelayed, 1000);
     }
 
     @Override
@@ -207,18 +172,6 @@ public class MainActivity extends Activity implements RoomListener {
             Log.wtf(TAG, "kurentoRoomAPI is null!");
         }
     }
-
-    private Runnable joinRoomDelayed = new Runnable() {
-        @Override
-        public void run() {
-        if (kurentoRoomAPI.isWebSocketConnected()) {
-            joinRoom();
-            mUsernameTV.setText("User: " + username + "\nRoom: " + roomname);
-        } else {
-            mHandler.postDelayed(joinRoomDelayed, 1000);
-        }
-        }
-    };
 
     private Runnable clearMessageView = new Runnable() {
         @Override
@@ -396,6 +349,32 @@ public class MainActivity extends Activity implements RoomListener {
                 }
             });
         }
+    }
+
+    @Override
+    public void onRoomConnected() {
+        if (kurentoRoomAPI.isWebSocketConnected()) {
+            joinRoom();
+            MainActivity.this.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mUsernameTV.setText("User: " + username + "\nRoom: " + roomname);
+                }
+            });
+
+
+        }
+    }
+
+    @Override
+    public void onRoomDisconnected() {
+        MainActivity.this.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                mTextMessageTV.setText("Connection to room lost");
+            }
+        });
+
     }
 
     public static KurentoRoomAPI getKurentoRoomAPIInstance(){

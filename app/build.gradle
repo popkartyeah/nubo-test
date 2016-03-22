@@ -24,13 +24,13 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
-    //compile files('libs/libjingle_peerconnection.jar')
+
     compile 'fi.vtt.nubomedia:jsonrpc-ws-android:1.0.4'
     compile 'fi.vtt.nubomedia:utilities-android:1.0.0'
     compile 'fi.vtt.nubomedia:webrtcpeer-android:1.0.2'
-    compile 'fi.vtt.nubomedia:kurento-room-client-android:1.0.9'
-    //compile files('../../kurento-room-client-android/kurento-room-client-android/build/intermediates/bundles/debug/classes.jar')
-    //compile files('../../webrtcpeer-android/webrtcpeer-android/build/intermediates/bundles/debug/classes.jar')
+    compile 'fi.vtt.nubomedia:kurento-room-client-android:1.0.10'
 
-    //compile files('libs/kurento-room-client-android-debug.jar')
+//    compile files('../../kurento-room-client-android/kurento-room-client-android/build/intermediates/bundles/debug/classes.jar')
+//    compile files('../../webrtcpeer-android/webrtcpeer-android/build/intermediates/bundles/debug/classes.jar')
+
 }
