@@ -84,18 +84,19 @@ public class MainActivity extends Activity implements RoomListener {
 
 
             // Load test certificate from assets
-            CertificateFactory cf;
-            Certificate ca = null;
-            try {
-                cf = CertificateFactory.getInstance("X.509");
-                InputStream caInput = new BufferedInputStream(MainActivity.context.getAssets().open("kurento_room_base64.cer"));
-                ca = cf.generateCertificate(caInput);
-                kurentoRoomAPI.addTrustedCertificate("ca", ca);
-            } catch (CertificateException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+//            CertificateFactory cf;
+//            Certificate ca = null;
+//            try {
+//                cf = CertificateFactory.getInstance("X.509");
+//                InputStream caInput = new BufferedInputStream(MainActivity.context.getAssets().open("kurento_room_base64.cer"));
+//                ca = cf.generateCertificate(caInput);
+//                kurentoRoomAPI.addTrustedCertificate("ca", ca);
+//            } catch (CertificateException e) {
+//                e.printStackTrace();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//            kurentoRoomAPI.useSelfSignedCertificate(true);
         }
 
         if (!kurentoRoomAPI.isWebSocketConnected()) {

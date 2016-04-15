@@ -275,7 +275,7 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
             });
         } else { // Asking for remote user video
             remoteSdp = sessionDescription;
-
+            nbmWebRTCPeer.selectCameraPosition(NBMMediaConfiguration.NBMCameraPosition.BACK);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
