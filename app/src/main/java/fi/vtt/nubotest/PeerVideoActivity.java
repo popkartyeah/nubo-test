@@ -118,7 +118,7 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
         localRender = VideoRendererGui.create(	LOCAL_X_CONNECTED, LOCAL_Y_CONNECTED,
                 LOCAL_WIDTH_CONNECTED, LOCAL_HEIGHT_CONNECTED,
                 scalingType, true);
-        NBMMediaConfiguration.NBMVideoFormat receiverVideoFormat = new NBMMediaConfiguration.NBMVideoFormat(1280, 720, PixelFormat.RGB_888, 30);
+        NBMMediaConfiguration.NBMVideoFormat receiverVideoFormat = new NBMMediaConfiguration.NBMVideoFormat(352, 288, PixelFormat.RGB_888, 20);
         peerConnectionParameters = new NBMMediaConfiguration(   NBMMediaConfiguration.NBMRendererType.OPENGLES,
                 NBMMediaConfiguration.NBMAudioCodec.OPUS, 0,
                 NBMMediaConfiguration.NBMVideoCodec.VP8, 0,
@@ -275,7 +275,7 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
             });
         } else { // Asking for remote user video
             remoteSdp = sessionDescription;
-            nbmWebRTCPeer.selectCameraPosition(NBMMediaConfiguration.NBMCameraPosition.BACK);
+//            nbmWebRTCPeer.selectCameraPosition(NBMMediaConfiguration.NBMCameraPosition.BACK);
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -339,7 +339,7 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
         Log.d(TAG, "OnRoomResponse:" + response);
         if (Integer.valueOf(response.getId()) == publishVideoRequestId){
             SessionDescription sd = new SessionDescription(SessionDescription.Type.ANSWER,
-                                                            response.getValue("sdpAnswer"));
+                                                            response.getValue("sdpAnswer").get(0));
             if (callState == CallState.PUBLISHING){
                 callState = CallState.PUBLISHED;
                 nbmWebRTCPeer.processAnswer(sd, "derp");

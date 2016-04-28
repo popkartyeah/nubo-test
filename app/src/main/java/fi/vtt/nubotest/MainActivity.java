@@ -23,6 +23,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import fi.vtt.nubomedia.kurentoroomclientandroid.KurentoRoomAPI;
@@ -275,21 +276,23 @@ public class MainActivity extends Activity implements RoomListener {
         //logAndToast(response.toString());
         Log.i(TAG, response.toString());
 
-        HashMap<String, String> map = response.getValues();
-        if(map!=null) {
-            for (String key : map.keySet()) {
+        List<HashMap<String, String>> mapList = response.getValues();
+        if(mapList!=null) {
+            for (HashMap<String, String> map : mapList) {
+                for (String key : map.keySet()) {
 
-                if (key.equals("id")) {
-                    final String otherUser = map.get("id");
-                    logAndToast("User: " + otherUser);
-                    MainActivity.this.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            mCallNumET.setText(otherUser);
-                        }
-                    });
+                    if (key.equals("id")) {
+                        final String otherUser = map.get("id");
+                        logAndToast("User: " + otherUser);
+                        MainActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                mCallNumET.setText(otherUser);
+                            }
+                        });
+                    }
+                    Log.i(TAG, key + ":" + map.get(key));
                 }
-                Log.i(TAG, key + ":" + map.get(key));
             }
         }
     }
