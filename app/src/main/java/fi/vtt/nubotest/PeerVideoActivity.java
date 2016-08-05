@@ -14,6 +14,7 @@ import android.view.WindowManager;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import org.webrtc.DataChannel;
 import org.webrtc.IceCandidate;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
@@ -22,6 +23,8 @@ import org.webrtc.SessionDescription;
 import org.webrtc.VideoRenderer;
 import org.webrtc.VideoRendererGui;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.util.Map;
 
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomError;
@@ -126,21 +129,26 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
                 NBMMediaConfiguration.NBMCameraPosition.FRONT);
         nbmWebRTCPeer = new NBMWebRTCPeer(peerConnectionParameters, this, localRender, this);
         nbmWebRTCPeer.initialize();
-        Log.i(TAG, "PeerVideoActivity initialized");
-        mHandler.postDelayed(publishDelayed, 4000);
+        Log.i(TAG, "Initializing PeerVideoActivity...");
+        mHandler.post(publishWhenReady);
 
         MainActivity.getKurentoRoomAPIInstance().addObserver(this);
 
-
-
         callState = CallState.PUBLISHING;
         mCallStatus.setText("Publishing...");
-
     }
 
-    private Runnable publishDelayed = new Runnable() {
+    private Runnable publishWhenReady = new Runnable() {
         @Override
         public void run() {
+            while(!nbmWebRTCPeer.isInitialized()) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+            Log.i(TAG, "PeerVideoActivity initialized");
             nbmWebRTCPeer.generateOffer("derp", true);
         }
     };
@@ -198,6 +206,29 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
 
     @Override
     public void onBackPressed() {
+        // Data channel test code
+        /*DataChannel channel = nbmWebRTCPeer.getDataChannel("derp", "test_channel_static");
+        if (channel.state() == DataChannel.State.OPEN) {
+            sendHelloMessage(channel);
+            Log.i(TAG, "[datachannel] Datachannel open, sending hello");
+        }
+        else {
+            Log.i(TAG, "[datachannel] Channel is not open! State: " + channel.state());
+        }
+        Log.i(TAG, "[DataChannel] Testing for existing channel");
+        DataChannel channel =  nbmWebRTCPeer.getDataChannel("derp", "default");
+        if (channel == null) {
+            DataChannel.Init init = new DataChannel.Init();
+            init.negotiated = false;
+            init.ordered = true;
+            Log.i(TAG, "[DataChannel] Channel does not exist, creating...");
+            channel = nbmWebRTCPeer.createDataChannel("derp", "test_channel", init);
+        }
+        else {
+            Log.i(TAG, "[DataChannel] Channel already exists. State: " + channel.state());
+            sendHelloMessage(channel);
+        }*/
+
         // If back button has not been pressed in a while then trigger thread and toast notification
         if (!this.backPressed){
             this.backPressed = true;
@@ -206,7 +237,7 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
                 @Override
                 public void run() {
                     try {
-                        Thread.sleep(5000);
+                        Thread.sleep(1000);
                         backPressed = false;
                     } catch (InterruptedException e){ Log.d("VCA-oBP","Successfully interrupted"); }
                 }
@@ -335,6 +366,40 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
     }
 
     @Override
+    public void onDataChannel(DataChannel dataChannel, NBMPeerConnection connection) {
+        Log.i(TAG, "[datachannel] Peer opened data channel");
+    }
+
+    @Override
+    public void onBufferedAmountChange(long l, NBMPeerConnection connection, DataChannel channel) {
+
+    }
+
+    public void sendHelloMessage(DataChannel channel) {
+        byte[] rawMessage = "Hello Peer!".getBytes(Charset.forName("UTF-8"));
+        ByteBuffer directData = ByteBuffer.allocateDirect(rawMessage.length);
+        directData.put(rawMessage);
+        directData.flip();
+        DataChannel.Buffer data = new DataChannel.Buffer(directData, false);
+        channel.send(data);
+    }
+
+    @Override
+    public void onStateChange(NBMPeerConnection connection, DataChannel channel) {
+        Log.i(TAG, "[datachannel] DataChannel onStateChange: " + channel.state());
+        if (channel.state() == DataChannel.State.OPEN) {
+            sendHelloMessage(channel);
+            Log.i(TAG, "[datachannel] Datachannel open, sending first hello");
+        }
+    }
+
+    @Override
+    public void onMessage(DataChannel.Buffer buffer, NBMPeerConnection connection, DataChannel channel) {
+        Log.i(TAG, "[datachannel] Message received: " + buffer.toString());
+        sendHelloMessage(channel);
+    }
+
+    @Override
     public void onRoomResponse(RoomResponse response) {
         Log.d(TAG, "OnRoomResponse:" + response);
         if (Integer.valueOf(response.getId()) == publishVideoRequestId){
@@ -388,4 +453,5 @@ public class PeerVideoActivity extends ListActivity implements NBMWebRTCPeer.Obs
     public void onRoomDisconnected() {
 
     }
+
 }

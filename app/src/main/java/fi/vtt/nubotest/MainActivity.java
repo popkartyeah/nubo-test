@@ -25,7 +25,6 @@ import java.security.cert.CertificateFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Vector;
 import fi.vtt.nubomedia.kurentoroomclientandroid.KurentoRoomAPI;
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomError;
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomListener;
@@ -82,7 +81,6 @@ public class MainActivity extends Activity implements RoomListener {
 
             Log.i(TAG, "kurentoRoomAPI is null");
             kurentoRoomAPI = new KurentoRoomAPI(executor, wsUri, this);
-
 
             // Load test certificate from assets
 //            CertificateFactory cf;
@@ -166,7 +164,7 @@ public class MainActivity extends Activity implements RoomListener {
             roomId = Constants.id;
             Log.i(TAG, "Joinroom: User: "+this.username+", Room: "+this.roomname+" id:"+roomId);
             if (kurentoRoomAPI.isWebSocketConnected()) {
-                kurentoRoomAPI.sendJoinRoom(this.username, this.roomname, roomId);
+                kurentoRoomAPI.sendJoinRoom(this.username, this.roomname, true, roomId);
             }
         }
         else
