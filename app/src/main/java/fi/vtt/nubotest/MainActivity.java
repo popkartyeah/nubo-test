@@ -2,11 +2,13 @@ package fi.vtt.nubotest;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -15,7 +17,6 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,8 +24,11 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import fi.vtt.nubomedia.kurentoroomclientandroid.KurentoRoomAPI;
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomError;
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomListener;
@@ -32,10 +36,8 @@ import fi.vtt.nubomedia.kurentoroomclientandroid.RoomNotification;
 import fi.vtt.nubomedia.kurentoroomclientandroid.RoomResponse;
 import fi.vtt.nubomedia.utilitiesandroid.LooperExecutor;
 import fi.vtt.nubotest.util.Constants;
-import org.java_websocket.WebSocketImpl;
 
 public class MainActivity extends Activity implements RoomListener {
-    private SharedPreferences mSharedPreferences;
     private String username, roomname;
     private String TAG = "MainActivity";
     private LooperExecutor executor;
@@ -43,67 +45,85 @@ public class MainActivity extends Activity implements RoomListener {
     private int roomId=0;
     private EditText mCallNumET, mTextMessageET;
     private TextView mUsernameTV, mTextMessageTV;
+    private String wsUri;
+    public static Map<String, Boolean> userPublishList = new HashMap<>();
     Handler mHandler;
-    public boolean mBounded;
     public static Context context;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        WebSocketImpl.DEBUG = true;
+
         setContentView(R.layout.activity_main);
-        MainActivity.context = getApplicationContext();
-        this.mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
-
-        Constants.SERVER_ADDRESS_SET_BY_USER = this.mSharedPreferences.getString(Constants.SERVER_NAME, Constants.DEFAULT_SERVER);
-
-        this.username     = this.mSharedPreferences.getString(Constants.USER_NAME, "");
-        this.roomname     = this.mSharedPreferences.getString(Constants.ROOM_NAME, "");
-
-        Log.i(TAG, "username: "+this.username);
-        Log.i(TAG, "roomname: "+this.roomname);
-
         this.mCallNumET   = (EditText) findViewById(R.id.call_num);
         this.mUsernameTV = (TextView) findViewById(R.id.main_username);
         this.mTextMessageTV = (TextView) findViewById(R.id.message_textview);
         this.mTextMessageET = (EditText) findViewById(R.id.main_text_message);
-        this.mUsernameTV.setText("Connecting "+this.username+"\nto room "+this.roomname+"...");
         this.mTextMessageTV.setText("");
+        MainActivity.context = getApplicationContext();
+        executor = new LooperExecutor();
+        executor.requestStart();
+        SharedPreferences mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
+        Constants.SERVER_ADDRESS_SET_BY_USER = mSharedPreferences.getString(Constants.SERVER_NAME, Constants.DEFAULT_SERVER);
+        wsUri = mSharedPreferences.getString(Constants.SERVER_NAME, Constants.DEFAULT_SERVER);
+        kurentoRoomAPI = new KurentoRoomAPI(executor, wsUri, this);
+        mHandler = new Handler();
 
-        String wsUri = this.mSharedPreferences.getString(Constants.SERVER_NAME, Constants.DEFAULT_SERVER);
+        this.username     = mSharedPreferences.getString(Constants.USER_NAME, "");
+        this.roomname     = mSharedPreferences.getString(Constants.ROOM_NAME, "");
+        Log.i(TAG, "username: "+this.username);
+        Log.i(TAG, "roomname: "+this.roomname);
 
-        if(executor==null) {
-            executor = new LooperExecutor();
-            executor.requestStart();
+        // Load test certificate from assets
+        CertificateFactory cf;
+        try {
+            cf = CertificateFactory.getInstance("X.509");
+            InputStream caInput = new BufferedInputStream(MainActivity.context.getAssets().open("kurento_room_base64.cer"));
+            Certificate ca = cf.generateCertificate(caInput);
+            kurentoRoomAPI.addTrustedCertificate("ca", ca);
+        } catch (CertificateException|IOException e) {
+            e.printStackTrace();
         }
+        kurentoRoomAPI.useSelfSignedCertificate(true);
+    }
 
-        if(kurentoRoomAPI==null) {
-
-            Log.i(TAG, "kurentoRoomAPI is null");
-            kurentoRoomAPI = new KurentoRoomAPI(executor, wsUri, this);
-
-            // Load test certificate from assets
-//            CertificateFactory cf;
-//            Certificate ca = null;
-//            try {
-//                cf = CertificateFactory.getInstance("X.509");
-//                InputStream caInput = new BufferedInputStream(MainActivity.context.getAssets().open("kurento_room_base64.cer"));
-//                ca = cf.generateCertificate(caInput);
-//                kurentoRoomAPI.addTrustedCertificate("ca", ca);
-//            } catch (CertificateException e) {
-//                e.printStackTrace();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
-//            kurentoRoomAPI.useSelfSignedCertificate(true);
-        }
+    @Override
+    public void onStart() {
+        super.onStart();
 
         if (!kurentoRoomAPI.isWebSocketConnected()) {
-            Log.i(TAG, "connectWebSocket");
+            this.mUsernameTV.setText(getString(R.string.room_connecting, username, roomname));
+            Log.i(TAG, "Connecting to room at " + wsUri);
             kurentoRoomAPI.connectWebSocket();
         }
+    }
 
-        mHandler = new Handler();
+    private void showFinishingError(String title, String message) {
+        new AlertDialog.Builder(MainActivity.this)
+                .setTitle(title)
+                .setMessage(message)
+                .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) { finish(); }
+                })
+                .setIcon(android.R.drawable.ic_dialog_alert)
+                .show();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        Log.i(TAG, "onStop");
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.i(TAG, "onDestroy");
+        if (kurentoRoomAPI.isWebSocketConnected()) {
+            kurentoRoomAPI.sendLeaveRoom(roomId);
+            kurentoRoomAPI.disconnectWebSocket();
+        }
+        executor.requestStop();
+        super.onDestroy();
     }
 
     @Override
@@ -137,39 +157,13 @@ public class MainActivity extends Activity implements RoomListener {
         return super.onOptionsItemSelected(item);
     }
 
-    @Override
-    public void onStart() {
-        super.onStart();
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        Log.i(TAG, "onStop");
-    }
-
-    @Override
-    public void onDestroy() {
-        Log.i(TAG, "onDestroy");
-        if (kurentoRoomAPI.isWebSocketConnected()) {
-            kurentoRoomAPI.sendLeaveRoom(roomId);
-        }
-        kurentoRoomAPI.disconnectWebSocket();
-        super.onDestroy();
-    }
 
     private void joinRoom () {
-        if (kurentoRoomAPI != null) {
-            Constants.id++;
-            roomId = Constants.id;
-            Log.i(TAG, "Joinroom: User: "+this.username+", Room: "+this.roomname+" id:"+roomId);
-            if (kurentoRoomAPI.isWebSocketConnected()) {
-                kurentoRoomAPI.sendJoinRoom(this.username, this.roomname, true, roomId);
-            }
-        }
-        else
-        {
-            Log.wtf(TAG, "kurentoRoomAPI is null!");
+        Constants.id++;
+        roomId = Constants.id;
+        Log.i(TAG, "Joinroom: User: "+this.username+", Room: "+this.roomname+" id:"+roomId);
+        if (kurentoRoomAPI.isWebSocketConnected()) {
+            kurentoRoomAPI.sendJoinRoom(this.username, this.roomname, true, roomId);
         }
     }
 
@@ -201,10 +195,8 @@ public class MainActivity extends Activity implements RoomListener {
 
     public void showToast(String string) {
         try {
-            CharSequence text = string;
             int duration = Toast.LENGTH_SHORT;
-
-            Toast toast = Toast.makeText(this, text, duration);
+            Toast toast = Toast.makeText(this, string, duration);
             toast.show();
         }
         catch (Exception e){
@@ -232,7 +224,7 @@ public class MainActivity extends Activity implements RoomListener {
 
     /**
      * Handle incoming calls. TODO: Implement an accept/reject functionality.
-     * @param userId
+     * @param userId The id of the other user
      */
     private void dispatchIncomingCall(String userId){
         showToast("Call from: " + userId);
@@ -243,10 +235,6 @@ public class MainActivity extends Activity implements RoomListener {
         startActivity(intent);
     }
 
-    /**
-     * Take the user to a video screen. USER_NAME is a required field.
-     * @param view button that is clicked to trigger toVideo
-     */
     public void sendTextMessage(View view){
         String message=mTextMessageET.getText().toString();
         if(message.length()>0) {
@@ -271,25 +259,32 @@ public class MainActivity extends Activity implements RoomListener {
 
     @Override
     public void onRoomResponse(RoomResponse response) {
-        //logAndToast(response.toString());
-        Log.i(TAG, response.toString());
+        JSONObject jsonObject = null;
+        try {
+            jsonObject = new JSONObject(response.getJsonObject().toJSONString());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        Log.i(TAG, jsonObject.toString());
+        JSONArray values = jsonObject.optJSONArray("value");
 
-        List<HashMap<String, String>> mapList = response.getValues();
-        if(mapList!=null) {
-            for (HashMap<String, String> map : mapList) {
-                for (String key : map.keySet()) {
-
-                    if (key.equals("id")) {
-                        final String otherUser = map.get("id");
-                        logAndToast("User: " + otherUser);
-                        MainActivity.this.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                mCallNumET.setText(otherUser);
-                            }
-                        });
+        // joinRoom response
+        if (values!= null && values.length()>0) {
+            JSONObject responseIter = values.optJSONObject(0);
+            if (responseIter != null) {
+                final String otherUser = responseIter.optString("id");
+                logAndToast("User: " + otherUser);
+                MainActivity.this.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mCallNumET.setText(otherUser);
                     }
-                    Log.i(TAG, key + ":" + map.get(key));
+                });
+
+                final JSONArray streams = responseIter.optJSONArray("streams");
+                if (streams != null && streams.length() > 0 && otherUser != null) {
+                    userPublishList.put(otherUser, true);
+                    Log.i(TAG, "I'm " + username + " DERP: Other peer published already (Room response)");
                 }
             }
         }
@@ -298,59 +293,65 @@ public class MainActivity extends Activity implements RoomListener {
     @Override
     public void onRoomError(RoomError error) {
         Log.wtf(TAG, error.toString());
-        logAndToast(error.toString());
-
         if(error.getCode().equals("104")) {
-            finish();
+            showFinishingError("Room error", error.toString());
         }
     }
 
     @Override
     public void onRoomNotification(RoomNotification notification) {
         Log.i(TAG, notification.toString());
-        if(notification.getMethod().equals("sendMessage")) {
-            Map<String, Object> map = notification.getParams();
+        Map<String, Object> map = notification.getParams();
+
+        // Somebody wrote a message to other users in the room
+        if(notification.getMethod().equals(RoomListener.METHOD_SEND_MESSAGE)) {
             final String user = map.get("user").toString();
             final String message = map.get("message").toString();
             MainActivity.this.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    mTextMessageTV.setText(user + ": " + message);
+                    mTextMessageTV.setText(getString(R.string.room_text_message, user, message));
                     mHandler.removeCallbacks(clearMessageView);
                     mHandler.postDelayed(clearMessageView, 5000);
                 }
             });
         }
 
-        if(notification.getMethod().equals("participantLeft")) {
-            Map<String, Object> map = notification.getParams();
+        // Somebody left the room
+        else if(notification.getMethod().equals(RoomListener.METHOD_PARTICIPANT_LEFT)) {
             final String user = map.get("name").toString();
-
             MainActivity.this.runOnUiThread(new Runnable() {
                 @Override
                 public void run(){
                     mCallNumET.setText("");
-                    mTextMessageTV.setText("participantLeft: " + user);
+                    mTextMessageTV.setText(getString(R.string.participant_left, user));
                     mHandler.removeCallbacks(clearMessageView);
                     mHandler.postDelayed(clearMessageView, 3000);
                 }
             });
         }
 
-        if(notification.getMethod().equals("participantJoined"))
-        {
-            Map<String, Object> map = notification.getParams();
+        // Somebody joined the room
+        else if(notification.getMethod().equals(RoomListener.METHOD_PARTICIPANT_JOINED)) {
             final String user = map.get("id").toString();
             MainActivity.this.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     mCallNumET.setText(user);
-                    mTextMessageTV.setText("participantJoined: " + user);
+                    mTextMessageTV.setText(getString(R.string.participant_joined, user));
                     mHandler.removeCallbacks(clearMessageView);
                     mHandler.postDelayed(clearMessageView, 3000);
                 }
             });
         }
+
+        // Somebody in the room published their video
+        else if(notification.getMethod().equals(RoomListener.METHOD_PARTICIPANT_PUBLISHED)) {
+            final String user = map.get("id").toString();
+            userPublishList.put(user, true);
+            Log.i(TAG, "I'm " + username + " DERP: Other peer published already:" + notification.toString());
+        }
+
     }
 
     @Override
@@ -360,23 +361,15 @@ public class MainActivity extends Activity implements RoomListener {
             MainActivity.this.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    mUsernameTV.setText("User: " + username + "\nRoom: " + roomname);
+                    mUsernameTV.setText(getString(R.string.room_title, username, roomname));
                 }
             });
-
-
         }
     }
 
     @Override
     public void onRoomDisconnected() {
-        MainActivity.this.runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                mTextMessageTV.setText("Connection to room lost");
-            }
-        });
-
+        showFinishingError("Disconnected", "You have been disconnected from room.");
     }
 
     public static KurentoRoomAPI getKurentoRoomAPIInstance(){

@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 23
+    compileSdkVersion 24
     buildToolsVersion '23.0.2'
     useLibrary 'org.apache.http.legacy'
     defaultConfig {
         applicationId "fi.vtt.nubotest"
         minSdkVersion 17
-        targetSdkVersion 23
+        targetSdkVersion 24
         versionCode 1
         versionName "1.0"
         multiDexEnabled true
@@ -23,13 +23,13 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    compile 'com.android.support:appcompat-v7:23.1.1'
+    //compile fileTree(dir: 'libs', include: ['*.jar'])
+    testCompile 'junit:junit:4.12'
+    compile 'com.android.support:appcompat-v7:24.2.0'
     compile 'io.pristine:libjingle:11139@aar'
-    compile 'fi.vtt.nubomedia:jsonrpc-ws-android:1.0.6'
     compile 'fi.vtt.nubomedia:utilities-android:1.0.1'
-    compile 'fi.vtt.nubomedia:webrtcpeer-android:1.0.6'
-    compile 'fi.vtt.nubomedia:kurento-room-client-android:1.0.15'
+    compile 'fi.vtt.nubomedia:webrtcpeer-android:1.0.11'
+    compile 'fi.vtt.nubomedia:kurento-room-client-android:1.0.16'
     //compile files('../../webrtcpeer-android/webrtcpeer-android/build/intermediates/bundles/debug/classes.jar')
     //compile files('../../kurento-room-client-android/kurento-room-client-android/build/intermediates/bundles/debug/classes.jar')
 

@@ -16,6 +16,13 @@
     <string name="here_now">Here Now:</string>
     <string name="no_call_history">No call History\n\nRecent calls appear here.</string>
 
+    <string name="participant_left">%1$s left the room</string>
+    <string name="participant_joined">%1$s joined the room</string>
+    <string name="room_title">%1$s in room %2$s</string>
+    <string name="room_lost_connection">Lost connection to room!</string>
+    <string name="room_text_message">%1$s: %2$s</string>
+    <string name="room_connecting">Connecting %1$s to room %2$s...</string>
+
     <!-- Incoming Call Activity -->
     <string name="incoming_call">Incoming Call&#8230;</string>
     <string name="incoming_call_from">Samuli Heinonen</string>
@@ -34,5 +41,7 @@
     <string name="button_disconnect">Disconnect</string>
     <string name="button_ok">OK</string>
     <string name="button_cancel">Cancel</string>
+    <string name="connecting">Connecting...</string>
+    <string name="waiting_remote_stream">Waiting remote stream...</string>
 
 </resources>

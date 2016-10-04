@@ -26,10 +26,10 @@ public class Constants {
     public static final String STATUS_OFFLINE   = "Offline";
     public static final String STATUS_BUSY      = "Busy";
     public static final String SERVER_NAME      = "serverName";
-    public static final String DEFAULT_SERVER   = "wss://roomtestbed.kurento.org:8443/room";
-    public static String SERVER_ADDRESS_SET_BY_USER = "wss://roomtestbed.kurento.org:8443/room";
-    //public static final String DEFAULT_SERVER   = "wss://room.willab.fi:8443/room";
-    //public static String SERVER_ADDRESS_SET_BY_USER = "wss://room.willab.fi:8443/room";
+    //public static final String DEFAULT_SERVER   = "wss://roomtestbed.kurento.org:8443/room";
+    //public static String SERVER_ADDRESS_SET_BY_USER = "wss://roomtestbed.kurento.org:8443/room";
+    public static final String DEFAULT_SERVER   = "wss://room.willab.fi:8443/room";
+    public static String SERVER_ADDRESS_SET_BY_USER = "wss://room.willab.fi:8443/room";
     public static final String ROOM_NAME    = "fi.vtt.nubotest.SHARED_PREFS.ROOM_NAME";
     public static int id    = 0;
 }

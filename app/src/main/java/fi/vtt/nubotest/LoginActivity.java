@@ -1,6 +1,5 @@
 package fi.vtt.nubotest;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -14,15 +13,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.Toast;
-
-import java.util.concurrent.Executor;
-
-import fi.vtt.nubomedia.kurentoroomclientandroid.KurentoRoomAPI;
-import fi.vtt.nubomedia.kurentoroomclientandroid.RoomError;
-import fi.vtt.nubomedia.kurentoroomclientandroid.RoomListener;
-import fi.vtt.nubomedia.kurentoroomclientandroid.RoomNotification;
-import fi.vtt.nubomedia.kurentoroomclientandroid.RoomResponse;
-import fi.vtt.nubomedia.utilitiesandroid.LooperExecutor;
 import fi.vtt.nubotest.util.Constants;
 
 /**
@@ -30,14 +20,10 @@ import fi.vtt.nubotest.util.Constants;
  * Saves the username in SharedPreferences.
  */
 public class LoginActivity extends AppCompatActivity {
-
     private String TAG = "LoginActivity";
-
     private EditText mUsername, mRoomname;
-    private Context mContext;
+    private Context context;
     private SharedPreferences mSharedPreferences;
-    //private LooperExecutor executor;
-    //private KurentoRoomAPI kurentoRoomAPI;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -45,22 +31,10 @@ public class LoginActivity extends AppCompatActivity {
         setContentView(R.layout.activity_login);
         Toolbar myToolbar = (Toolbar) findViewById(R.id.my_toolbar);
         setSupportActionBar(myToolbar);
-
-        mContext = this;
-
+        context = this;
         this.mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
-
         mUsername = (EditText) findViewById(R.id.username);
         mRoomname = (EditText) findViewById(R.id.roomname);
-
-        /*
-        Bundle extras = getIntent().getExtras();
-        if (extras != null){
-            String lastUsername = extras.getString("oldUsername", "");
-            mUsername.setText(lastUsername);
-        }
-        */
-
     }
 
     @Override
@@ -79,7 +53,7 @@ public class LoginActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
-            Intent intent = new Intent(mContext, PreferencesActivity.class);
+            Intent intent = new Intent(context, PreferencesActivity.class);
             startActivity(intent);
             return true;
         }
@@ -90,25 +64,6 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     public void onStart() {
         super.onStart();
-
-        /*
-        String wsUri = this.mSharedPreferences.getString(Constants.SERVER_NAME, Constants.DEFAULT_SERVER);
-
-
-        if(executor==null) {
-            executor = new LooperExecutor();
-            executor.requestStart();
-        }
-        if(kurentoRoomAPI==null) {
-            kurentoRoomAPI = new KurentoRoomAPI(executor, wsUri, this);
-        }
-
-        if(kurentoRoomAPI!=null) {
-
-            if (!kurentoRoomAPI.isWebSocketConnected())
-                kurentoRoomAPI.connectWebSocket();
-        }
-        */
     }
 
     @Override
@@ -116,6 +71,7 @@ public class LoginActivity extends AppCompatActivity {
         super.onStop();
         Log.i(TAG, "onStop");
     };
+
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -136,30 +92,15 @@ public class LoginActivity extends AppCompatActivity {
         SharedPreferences.Editor edit = mSharedPreferences.edit();
         edit.putString(Constants.USER_NAME, username);
         edit.putString(Constants.ROOM_NAME, roomname);
-        //edit.apply();
-        edit.commit();
+        edit.apply();
 
-        Intent intent = new Intent(mContext, MainActivity.class);
+        Intent intent = new Intent(context, MainActivity.class);
         startActivity(intent);
-
-        /*
-
-        if(kurentoRoomAPI.isWebSocketConnected()) {
-            Intent intent = new Intent(mContext, MainActivity.class);
-            startActivity(intent);
-        }
-        else
-            showToast(getApplicationContext().getString(R.string.not_connected));
-        */
-
     }
 
     public void showToast(String string) {
         try {
-            CharSequence text = string;
-            int duration = Toast.LENGTH_SHORT;
-
-            Toast toast = Toast.makeText(this, text, duration);
+            Toast toast = Toast.makeText(this, string, Toast.LENGTH_SHORT);
             toast.show();
         }
         catch (Exception e){e.printStackTrace();}
@@ -198,5 +139,4 @@ public class LoginActivity extends AppCompatActivity {
         }
         return true;
     }
-
 }
