@@ -1,3 +1,20 @@
+/*
+ * (C) Copyright 2016 VTT (http://www.vtt.fi)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ */
+
 package fi.vtt.nubotest;
 
 import android.app.Activity;
@@ -24,6 +41,7 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.json.JSONArray;
@@ -43,7 +61,7 @@ public class MainActivity extends Activity implements RoomListener {
     private LooperExecutor executor;
     private static KurentoRoomAPI kurentoRoomAPI;
     private int roomId=0;
-    private EditText mCallNumET, mTextMessageET;
+    private EditText mTextMessageET;
     private TextView mUsernameTV, mTextMessageTV;
     private String wsUri;
     public static Map<String, Boolean> userPublishList = new HashMap<>();
@@ -55,7 +73,6 @@ public class MainActivity extends Activity implements RoomListener {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
-        this.mCallNumET   = (EditText) findViewById(R.id.call_num);
         this.mUsernameTV = (TextView) findViewById(R.id.main_username);
         this.mTextMessageTV = (TextView) findViewById(R.id.message_textview);
         this.mTextMessageET = (EditText) findViewById(R.id.main_text_message);
@@ -184,13 +201,9 @@ public class MainActivity extends Activity implements RoomListener {
      * @param view button that is clicked to trigger toVideo
      */
     public void makeCall(View view){
-        String callNum = mCallNumET.getText().toString();
-        Log.i(TAG, "makeCall: " + callNum);
-        if (callNum.isEmpty() || callNum.equals(this.username)){
-            showToast("Enter a valid user ID to call.");
-            return;
-        }
-        dispatchCall(callNum);
+        Intent intent = new Intent(MainActivity.this, PeerVideoActivity.class);
+        intent.putExtra(Constants.USER_NAME, username);
+        startActivity(intent);
     }
 
     public void showToast(String string) {
@@ -202,37 +215,6 @@ public class MainActivity extends Activity implements RoomListener {
         catch (Exception e){
             e.printStackTrace();
         }
-    }
-
-    /**TODO: Debate who calls who. Should one be on standby? Or use State API for busy/available
-     * Check that user is online. If they are, dispatch the call by publishing to their standby
-     *   channel. If the publish was successful, then change activities over to the video chat.
-     * The called user will then have the option to accept of decline the call. If they accept,
-     *   they will be brought to the video chat activity as well, to connect video/audio. If
-     *   they decline, a hangup will be issued, and the VideoChat adapter's onHangup callback will
-     *   be invoked.
-     * @param callNum Number to publish a call to.
-     */
-    public void dispatchCall(final String callNum){
-        Log.i(TAG, "dispatchCall: " + callNum);
-
-        Intent intent = new Intent(MainActivity.this, PeerVideoActivity.class);
-        intent.putExtra(Constants.USER_NAME, username);
-        intent.putExtra(Constants.CALL_USER, callNum);  // Only accept from this number?
-        startActivity(intent);
-    }
-
-    /**
-     * Handle incoming calls. TODO: Implement an accept/reject functionality.
-     * @param userId The id of the other user
-     */
-    private void dispatchIncomingCall(String userId){
-        showToast("Call from: " + userId);
-        Log.i(TAG, "userId: "+userId);
-        Intent intent = new Intent(MainActivity.this, IncomingCallActivity.class);
-        intent.putExtra(Constants.USER_NAME, username);
-        intent.putExtra(Constants.CALL_USER, userId);
-        startActivity(intent);
     }
 
     public void sendTextMessage(View view){
@@ -259,42 +241,17 @@ public class MainActivity extends Activity implements RoomListener {
 
     @Override
     public void onRoomResponse(RoomResponse response) {
-        JSONObject jsonObject = null;
-        try {
-            jsonObject = new JSONObject(response.getJsonObject().toJSONString());
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        Log.i(TAG, jsonObject.toString());
-        JSONArray values = jsonObject.optJSONArray("value");
-
         // joinRoom response
-        if (values!= null && values.length()>0) {
-            JSONObject responseIter = values.optJSONObject(0);
-            if (responseIter != null) {
-                final String otherUser = responseIter.optString("id");
-                logAndToast("User: " + otherUser);
-                MainActivity.this.runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        mCallNumET.setText(otherUser);
-                    }
-                });
-
-                final JSONArray streams = responseIter.optJSONArray("streams");
-                if (streams != null && streams.length() > 0 && otherUser != null) {
-                    userPublishList.put(otherUser, true);
-                    Log.i(TAG, "I'm " + username + " DERP: Other peer published already (Room response)");
-                }
-            }
+        if (response.getMethod()==KurentoRoomAPI.Method.JOIN_ROOM) {
+            userPublishList = new HashMap<>(response.getUsers());
         }
     }
 
     @Override
     public void onRoomError(RoomError error) {
         Log.wtf(TAG, error.toString());
-        if(error.getCode().equals("104")) {
-            showFinishingError("Room error", error.toString());
+        if(error.getCode() == 104) {
+            showFinishingError("Room error", "Username already taken");
         }
     }
 
@@ -323,7 +280,6 @@ public class MainActivity extends Activity implements RoomListener {
             MainActivity.this.runOnUiThread(new Runnable() {
                 @Override
                 public void run(){
-                    mCallNumET.setText("");
                     mTextMessageTV.setText(getString(R.string.participant_left, user));
                     mHandler.removeCallbacks(clearMessageView);
                     mHandler.postDelayed(clearMessageView, 3000);
@@ -337,7 +293,6 @@ public class MainActivity extends Activity implements RoomListener {
             MainActivity.this.runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    mCallNumET.setText(user);
                     mTextMessageTV.setText(getString(R.string.participant_joined, user));
                     mHandler.removeCallbacks(clearMessageView);
                     mHandler.postDelayed(clearMessageView, 3000);
