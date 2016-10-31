@@ -401,7 +401,7 @@ public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observe
     @Override
     public void onRoomResponse(RoomResponse response) {
         Log.d(TAG, "OnRoomResponse:" + response);
-        int requestId = Integer.valueOf(response.getId());
+        int requestId =response.getId();
 
         if (requestId == publishVideoRequestId){
 
