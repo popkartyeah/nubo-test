@@ -66,18 +66,17 @@ public class MainActivity extends Activity implements RoomListener {
     private String wsUri;
     public static Map<String, Boolean> userPublishList = new HashMap<>();
     Handler mHandler;
-    public static Context context;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Context context = getApplicationContext();
 
         setContentView(R.layout.activity_main);
         this.mUsernameTV = (TextView) findViewById(R.id.main_username);
         this.mTextMessageTV = (TextView) findViewById(R.id.message_textview);
         this.mTextMessageET = (EditText) findViewById(R.id.main_text_message);
         this.mTextMessageTV.setText("");
-        MainActivity.context = getApplicationContext();
         executor = new LooperExecutor();
         executor.requestStart();
         SharedPreferences mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getBaseContext());
@@ -95,7 +94,7 @@ public class MainActivity extends Activity implements RoomListener {
         CertificateFactory cf;
         try {
             cf = CertificateFactory.getInstance("X.509");
-            InputStream caInput = new BufferedInputStream(MainActivity.context.getAssets().open("kurento_room_base64.cer"));
+            InputStream caInput = new BufferedInputStream(context.getAssets().open("kurento_room_base64.cer"));
             Certificate ca = cf.generateCertificate(caInput);
             kurentoRoomAPI.addTrustedCertificate("ca", ca);
         } catch (CertificateException|IOException e) {
