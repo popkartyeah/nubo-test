@@ -365,6 +365,9 @@ public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observe
                 if (entry.getValue()) {
                     GenerateOfferForRemote(entry.getKey());
                     Log.i(TAG, "I'm " + username + " DERP: Generating offer for peer " + entry.getKey());
+                    // Set value to false so that if this function is called again we won't
+                    // generate another offer for this user
+                    entry.setValue(false);
                 }
             }
         }
