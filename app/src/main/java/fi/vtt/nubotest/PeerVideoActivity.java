@@ -255,28 +255,16 @@ public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observe
 
     @Override
     public void onLocalSdpOfferGenerated(final SessionDescription sessionDescription, final NBMPeerConnection nbmPeerConnection) {
-
         if (callState == CallState.PUBLISHING || callState == CallState.PUBLISHED) {
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                Log.d(TAG, "Sending " + sessionDescription.type);
-                publishVideoRequestId = ++Constants.id;
-                MainActivity.getKurentoRoomAPIInstance().sendPublishVideo(sessionDescription.description, false, publishVideoRequestId);
-                }
-            });
-
+            Log.d(TAG, "Sending " + sessionDescription.type);
+            publishVideoRequestId = ++Constants.id;
+            MainActivity.getKurentoRoomAPIInstance().sendPublishVideo(sessionDescription.description, false, publishVideoRequestId);
         } else { // Asking for remote user video
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                Log.d(TAG, "Sending " + sessionDescription.type);
-                publishVideoRequestId = ++Constants.id;
-                String username = nbmPeerConnection.getConnectionId();
-                videoRequestUserMapping.put(publishVideoRequestId, nbmPeerConnection.getConnectionId());
-                MainActivity.getKurentoRoomAPIInstance().sendReceiveVideoFrom(username, "webcam", sessionDescription.description, publishVideoRequestId);
-                }
-            });
+            Log.d(TAG, "Sending " + sessionDescription.type);
+            publishVideoRequestId = ++Constants.id;
+            String username = nbmPeerConnection.getConnectionId();
+            videoRequestUserMapping.put(publishVideoRequestId, username);
+            MainActivity.getKurentoRoomAPIInstance().sendReceiveVideoFrom(username, "webcam", sessionDescription.description, publishVideoRequestId);
         }
     }
 
