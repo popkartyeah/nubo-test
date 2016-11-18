@@ -57,36 +57,16 @@ import fi.vtt.nubotest.util.Constants;
 public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observer, RoomListener {
     private static final String TAG = "PeerVideoActivity";
 
-    private NBMMediaConfiguration peerConnectionParameters;
     private NBMWebRTCPeer nbmWebRTCPeer;
-
-    //private VideoRenderer.Callbacks localRender;
-    //private VideoRenderer.Callbacks remoteRender;
     private SurfaceViewRenderer masterView;
     private SurfaceViewRenderer localView;
 
     private Map<Integer, String> videoRequestUserMapping;
-
-    private SharedPreferences mSharedPreferences;
-
     private int publishVideoRequestId;
-    private int sendIceCandidateRequestId;
-
     private TextView mCallStatus;
-
     private String  username;
     private boolean backPressed = false;
     private Thread  backPressedThread = null;
-
-    private static final int LOCAL_X_CONNECTED = 72;
-    private static final int LOCAL_Y_CONNECTED = 72;
-    private static final int LOCAL_WIDTH_CONNECTED = 25;
-    private static final int LOCAL_HEIGHT_CONNECTED = 25;
-    // Remote video screen position
-    private static final int REMOTE_X = 0;
-    private static final int REMOTE_Y = 0;
-    private static final int REMOTE_WIDTH = 100;
-    private static final int REMOTE_HEIGHT = 100;
 
     private Handler mHandler = null;
     private CallState callState;
@@ -122,14 +102,7 @@ public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observe
         localView.init(rootEglBase.getEglBaseContext(), null);
         localView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FILL);
 
-        //VideoRendererGui.setView(, null);
-        /*remoteRender = VideoRendererGui.create( REMOTE_X, REMOTE_Y, REMOTE_WIDTH, REMOTE_HEIGHT,
-                RendererCommon.ScalingType.SCALE_ASPECT_FILL, false);
-        localRender = VideoRendererGui.create(	LOCAL_X_CONNECTED, LOCAL_Y_CONNECTED,
-                LOCAL_WIDTH_CONNECTED, LOCAL_HEIGHT_CONNECTED,
-                RendererCommon.ScalingType.SCALE_ASPECT_FILL, true);*/
-
-        peerConnectionParameters = new NBMMediaConfiguration(
+        NBMMediaConfiguration peerConnectionParameters = new NBMMediaConfiguration(
                 NBMMediaConfiguration.NBMRendererType.OPENGLES,
                 NBMMediaConfiguration.NBMAudioCodec.OPUS, 0,
                 NBMMediaConfiguration.NBMVideoCodec.VP8, 0,
@@ -313,7 +286,7 @@ public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observe
 
     @Override
     public void onIceCandidate(IceCandidate iceCandidate, NBMPeerConnection nbmPeerConnection) {
-        sendIceCandidateRequestId = ++Constants.id;
+        int sendIceCandidateRequestId = ++Constants.id;
         if (callState == CallState.PUBLISHING || callState == CallState.PUBLISHED){
             MainActivity.getKurentoRoomAPIInstance().sendOnIceCandidate(this.username, iceCandidate.sdp,
                     iceCandidate.sdpMid, Integer.toString(iceCandidate.sdpMLineIndex), sendIceCandidateRequestId);
@@ -383,7 +356,6 @@ public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observe
         Log.i(TAG, "[datachannel] Message received: " + buffer.toString());
         sendHelloMessage(channel);
     }
-
 
     private Runnable offerWhenReady = new Runnable() {
         @Override
