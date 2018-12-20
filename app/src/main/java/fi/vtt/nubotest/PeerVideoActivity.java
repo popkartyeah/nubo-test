@@ -37,6 +37,9 @@ import org.webrtc.RendererCommon;
 import org.webrtc.SessionDescription;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.EglBase;
+import org.webrtc.VideoCapturer;
+import org.webrtc.VideoFileRenderer;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.HashMap;
@@ -70,6 +73,8 @@ public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observe
 
     private Handler mHandler = null;
     private CallState callState;
+
+    private VideoCapturer videoCapturer = null;
 
     private enum CallState{
         IDLE, PUBLISHING, PUBLISHED, WAITING_REMOTE_USER, RECEIVING_REMOTE_USER
@@ -105,13 +110,13 @@ public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observe
         NBMMediaConfiguration peerConnectionParameters = new NBMMediaConfiguration(
                 NBMMediaConfiguration.NBMRendererType.OPENGLES,
                 NBMMediaConfiguration.NBMAudioCodec.OPUS, 0,
-                NBMMediaConfiguration.NBMVideoCodec.VP8, 0,
-                new NBMMediaConfiguration.NBMVideoFormat(352, 288, PixelFormat.RGB_888, 20),
-                NBMMediaConfiguration.NBMCameraPosition.FRONT);
+                NBMMediaConfiguration.NBMVideoCodec.H264, 0,
+                new NBMMediaConfiguration.NBMVideoFormat(1280, 720, PixelFormat.RGB_888, 30),
+                NBMMediaConfiguration.NBMCameraPosition.BACK);
 
         videoRequestUserMapping = new HashMap<>();
 
-        nbmWebRTCPeer = new NBMWebRTCPeer(peerConnectionParameters, this, localView, this);
+        nbmWebRTCPeer = new NBMWebRTCPeer(peerConnectionParameters, this, rootEglBase.getEglBaseContext(), localView, this, getIntent());
         nbmWebRTCPeer.registerMasterRenderer(masterView);
         Log.i(TAG, "Initializing nbmWebRTCPeer...");
         nbmWebRTCPeer.initialize();
@@ -251,6 +256,7 @@ public class PeerVideoActivity extends Activity implements NBMWebRTCPeer.Observe
     @Override
     public void onInitialize() {
         nbmWebRTCPeer.generateOffer("local", true);
+        nbmWebRTCPeer.selectCameraPosition(NBMMediaConfiguration.NBMCameraPosition.BACK);
     }
 
     @Override
